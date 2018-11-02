@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import './App.css';
 import Web3 from 'web3';
+import keythereum from 'keythereum';
+import ethTx from 'ethereumjs-tx';
 //import messagesABI from './Messages.js';
 
 class App extends Component {
@@ -10,8 +12,8 @@ class App extends Component {
             sms: 'Mensaje por defecto',
             smsGet: '',
             account: '',
-            contractAddress: '0x42ba982b28b43bd435d258fd4b366758d8b4d287',
-            from: '0x7A05e28B361B0A6E1b528b7e186BB628B4b596Ff',
+            contractAddress: '0x959a5c9fb6def9c5fe772c1f46e8a2f769b0469d',
+            from: '0xeD5D1cDE7Dd6E9A47D9cc83F8C8023332B82865f',
             to: '0x5ee1DCd6C0CcED39FFe44948bF1e9305716B2AA4'};
     //this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
     this.web3 = new Web3(Web3.givenProvider);
@@ -325,10 +327,11 @@ var messagesABI = [
        this.setState({isConnected: true,
        messageContract: new this.web3.eth.Contract(messagesABI, this.state.contractAddress)
        });
+       var self = this;
        //this.setState({account: this.web3.eth.getAccounts().then(function (acs) {this.state.account = acs[0]})});
-//       this.web3.eth.getAccounts().then(function (acs) {
-//            this.setState ( {account: acs[0]})
-//       });
+       this.web3.eth.getAccounts().then(function (acs) {
+            self.setState ( {account: acs[0]})
+       });
      }
    }
 
@@ -341,24 +344,66 @@ var messagesABI = [
      }
 
      handleNewMessage(event) {
-       console.log('try to send msg: '+ this.state.sms);
-       this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send({ from: this.state.from });
+
+     var params = { keyBytes: 32, ivBytes: 16 };
+     var dk = keythereum.create(params);
+     console.log(dk);
+
+     var options = {
+       kdf: "pbkdf2",
+       cipher: "aes-128-ctr",
+       kdfparams: {
+         c: 262144,
+         dklen: 32,
+         prf: "hmac-sha256"
+       }
+     };
+     var keyObject = keythereum.dump('', dk.privateKey, dk.salt, dk.iv, options);
+    const txParams = {
+      nonce: '0x0',
+      gasPrice: '0x0',
+      gasLimit: '0xffffff',
+      to: '0x959a5c9fb6def9c5fe772c1f46e8a2f769b0469d',
+      value: '0x00',
+      from: '0x'+keyObject.address,
+      data: this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).encodeABI()
+    };
+
+    // Transaction is created
+    const tx = new ethTx(txParams);
+
+    // Transaction is signed
+    tx.sign(Buffer.from(keyObject.crypto.ciphertext, 'hex'));
+    const serializedTx = tx.serialize();
+    const rawTx = '0x' + serializedTx.toString('hex');
+    console.log(rawTx)
+
+    this.web3.eth.sendSignedTransaction(rawTx, (_erro, _repo) => {
+        console.log(_erro,_repo);
+    });
+
+//       console.log('try to send msg: '+ this.state.sms);
+//       console.log('try to send from: '+ this.state.from);
+//       console.log('try to send to: '+ this.state.to);
+//       this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send(
+//       { from: this.state.from,
+//         jsonInterface : messagesABI,
+//          gas: 100000000,
+//          gasPrice: '0'
+//       });
        event.preventDefault();
      }
 
      handleGetMessage(event) {
-       var m = this.state.messageContract.methods.getLastMessage(this.state.to).call()
+       var self = this;
+       this.state.messageContract.methods.getLastMessage(this.state.to).call()
            .then(
            function (response) {
-             //alert(response)
-             alert('from:' + response[0])
-             alert('message:' + response[1])
-             console.log ('texto: '+ response[1]);
+             self.setState({smsGet: response[1]});
              return response[1];
            }
            );
        event.preventDefault();
-       this.setState({smsGet: m})
      }
 
   render() {
@@ -366,7 +411,8 @@ var messagesABI = [
       <div>
         <h2>Is connected?:</h2><br/>
         {this.state.isConnected?'Connected to local node':'Not Connected'}
-        <h2>Your account: </h2><br/> {this.state.account}
+        <h2>Your account: {this.state.account}</h2>
+        <br/>
         <label>
           Message:
           <input type="text" value={this.state.sms} onChange={this.handleChange} />
