@@ -1,4 +1,4 @@
-var messagesABI = [
+export const messagesABI = [
   {
     "constant": true,
     "inputs": [],
@@ -294,4 +294,4 @@ var messagesABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   }
-]
+];
