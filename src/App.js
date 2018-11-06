@@ -7,6 +7,7 @@ import Web3 from 'web3';
 import keythereum from 'keythereum';
 import ethTx from 'ethereumjs-tx';
 import { messagesABI } from './Messages.js';
+import { debug } from 'util';
 
 
 class App extends Component {
@@ -17,7 +18,7 @@ class App extends Component {
       sms: 'Mensaje por defecto',
       smsGet: '',
       account: '',
-      contractAddress: '0x959a5c9fb6def9c5fe772c1f46e8a2f769b0469d',
+      contractAddress: '0x3d608303de0e4de78c83627ec79ed520ea5a8b72',
       from: '0xeD5D1cDE7Dd6E9A47D9cc83F8C8023332B82865f',
       to: '0x5ee1DCd6C0CcED39FFe44948bF1e9305716B2AA4'
     };
@@ -68,11 +69,15 @@ class App extends Component {
 
     //var keyObject = this.createAccount();
     //const rawTx = this.createTx(keyObject.address, keyObject.crypto.ciphertext);
-    const rawTx = this.createTx(accounts[0].address, accounts[0].privateKey);
+    //const rawTx = this.createTx(accounts[0].address, accounts[0].privateKey);
 
-    this.web3.eth.sendSignedTransaction(rawTx, (_erro, _repo) => {
-      console.log(_erro, _repo);
-    });
+    // this.web3.eth.sendSignedTransaction(rawTx, (_erro, _repo) => {
+    //   console.log(_erro, _repo);
+    // });
+debugger;
+    var self = this;
+    alert('acc: ',this.web3.eth.accounts[0])
+    this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send( {from: this.state.account });
 
     event.preventDefault();
   }
