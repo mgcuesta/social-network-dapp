@@ -18,41 +18,51 @@ class App extends Component {
       sms: 'Mensaje por defecto',
       smsGet: '',
       account: '',
-      contractAddress: '0x3d608303de0e4de78c83627ec79ed520ea5a8b72',
-      from: '0xeD5D1cDE7Dd6E9A47D9cc83F8C8023332B82865f',
-      to: '0x5ee1DCd6C0CcED39FFe44948bF1e9305716B2AA4'
+      contractAddress: '0x3fDda2392D89765946F89Af93F21be3E5C487EF1',
+      to: '0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad'
     };
     //this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
     this.web3 = new Web3(Web3.givenProvider);
-    this.handleChange = this.handleChange.bind(this);
-    this.handleNewMessage = this.handleNewMessage.bind(this);
-    this.handleGetMessage = this.handleGetMessage.bind(this);
-    this.setState = this.setState.bind(this);
   }
 
-  componentWillMount() {
-    if (this.web3 && this.web3.eth.net.isListening().then(console.log)) {
-      this.setState({
-        isConnected: true,
-        messageContract: new this.web3.eth.Contract(messagesABI, this.state.contractAddress)
-      });
-      var self = this;
-      //this.setState({account: this.web3.eth.getAccounts().then(function (acs) {this.state.account = acs[0]})});
-      this.web3.eth.getAccounts().then(function (acs) {
-        self.setState({ account: acs[0] })
-      });
+  async componentWillMount() {
+    if (this.web3) {
+      console.log("before");
+      let listening;
+      try {
+        listening = await this.web3.eth.net.isListening();
+
+        this.setState({
+          isConnected: true,
+          messageContract: new this.web3.eth.Contract(messagesABI, this.state.contractAddress)
+        });
+        const accounts = await this.web3.eth.getAccounts();
+
+        if (!accounts.length) {
+          console.log("haz login capullo");
+          return;
+        }
+
+        this.setState({ account: accounts[0] })
+
+      } catch (e){
+        console.log("error", e);
+      }
+      console.log(listening);
+
+      
     }
   }
 
-  handleChange(event) {
+  handleChange = (event) =>  {
     this.setState({ sms: event.target.value });
   }
 
-  handleGetChange(event) {
+  handleGetChange = (event) => {
 
   }
 
-  handleNewMessage(event) {
+  handleNewMessage = (event) => {
     /* definition of an Object */
     var Account = function (address, privateKey) {
       this.address = address;
@@ -74,15 +84,14 @@ class App extends Component {
     // this.web3.eth.sendSignedTransaction(rawTx, (_erro, _repo) => {
     //   console.log(_erro, _repo);
     // });
-debugger;
     var self = this;
-    alert('acc: ',this.web3.eth.accounts[0])
+    //alert('acc: ',this.web3.eth.accounts[0])
     this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send( {from: this.state.account });
 
     event.preventDefault();
   }
 
-  createTx(address, privateKey) {
+  createTx = (address, privateKey) => {
     const txParams = {
       nonce: '0x0',
       gasPrice: '0x0',
@@ -104,7 +113,7 @@ debugger;
     return rawTx;
   }
 
-  createAccount() {
+  createAccount = () => {
     var params = { keyBytes: 32, ivBytes: 16 };
     var dk = keythereum.create(params);
     console.log(dk);
@@ -138,9 +147,9 @@ debugger;
     //       });    
   };
 
-  handleGetMessage(event) {
+  handleGetMessage = (event) => {
     var self = this;
-    this.state.messageContract.methods.getLastMessage(this.state.to).call()
+    this.state.messageContract.methods.getLastMessage(this.state.account).call()
       .then(
         function (response) {
           self.setState({ smsGet: response[1] });
