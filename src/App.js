@@ -1,14 +1,12 @@
 import React, { Component } from 'react';
-import { Button, Table, ListGroupItem, ListGroup } from 'react-bootstrap';
-import DropdownButton from 'react-bootstrap/lib/DropdownButton'
-import MenuItem from 'react-bootstrap/lib/MenuItem';
+import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
+import 'react-bootstrap-table/css/react-bootstrap-table.css'
+import Dropdown from 'react-dropdown'
 import './App.css';
 import Web3 from 'web3';
 import keythereum from 'keythereum';
 import ethTx from 'ethereumjs-tx';
 import { messagesABI } from './Messages.js';
-import { debug } from 'util';
-
 
 class App extends Component {
   constructor(props) {
@@ -18,11 +16,13 @@ class App extends Component {
       sms: 'Mensaje por defecto',
       smsGet: '',
       account: '',
+      selectedReceiver: '',
       contractAddress: '0x3fDda2392D89765946F89Af93F21be3E5C487EF1',
       to: '0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad'
     };
     //this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
     this.web3 = new Web3(Web3.givenProvider);
+    this.handleRefreshInbox = this.handleRefreshInbox.bind(this)
   }
 
   async componentWillMount() {
@@ -45,34 +45,36 @@ class App extends Component {
 
         this.setState({ account: accounts[0] })
 
-      } catch (e){
+      } catch (e) {
         console.log("error", e);
       }
       console.log(listening);
 
-      
+
     }
   }
 
-  handleChange = (event) =>  {
+  handleChange = (event) => {
     this.setState({ sms: event.target.value });
   }
 
-  handleGetChange = (event) => {
+  async handleRefreshInbox() {
+    var updateSms = []
+    // alert(addresses[user.value]);
+    const totalMessages = await this.state.messageContract.methods.lastIndex(this.state.account).call()
+    var pos;
+    for (pos = 1; pos <= totalMessages; pos++) {
+      // alert('post: ' + pos);
+      const message = await this.state.messageContract.methods.getMessageByIndex(this.state.account, pos).call()
+      //alert('message: '+message[1])
+      this.setState({ smsGet: message[1] });
+      updateSms.push({ id: message[2], from: message[0], to: this.state.account, text: message[1] })
+      this.setState({ dataSmsIn: updateSms })
+    }
 
   }
 
   handleNewMessage = (event) => {
-    /* definition of an Object */
-    var Account = function (address, privateKey) {
-      this.address = address;
-      this.privateKey = privateKey;
-      return this;
-    };
-
-    var accounts = [new Account('0x59ebd6d3e83d6933e140913a34f296254490022c', '7de472733d1c3e247c48a3150f634df12eff1e4e09cc431d91aad4681f6c6016'),
-    new Account('0x25deaf3503595d6517d079bee4b08ab6506f291d', '0427a6434cb8cfe49d7ba43eb194f94e9717617b83515be6c8188f34ef5ce840')
-    ];
 
     // const alice = {address: '0x59ebd6d3e83d6933e140913a34f296254490022c', privateKey: '7de472733d1c3e247c48a3150f634df12eff1e4e09cc431d91aad4681f6c6016'};
 
@@ -84,10 +86,13 @@ class App extends Component {
     // this.web3.eth.sendSignedTransaction(rawTx, (_erro, _repo) => {
     //   console.log(_erro, _repo);
     // });
-    var self = this;
     //alert('acc: ',this.web3.eth.accounts[0])
-    this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send( {from: this.state.account });
-
+    if (this.state.selectedReceiver === '') {
+      alert('Please, select new receiver')
+    }
+    else {
+      this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send({ from: this.state.account });
+    }
     event.preventDefault();
   }
 
@@ -135,17 +140,10 @@ class App extends Component {
     return keyObject;
   }
 
-  sendMessageUsingMetamask() {
-    //       console.log('try to send msg: '+ this.state.sms);
-    //       console.log('try to send from: '+ this.state.from);
-    //       console.log('try to send to: '+ this.state.to);
-    //       this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send(
-    //       { from: this.state.from,
-    //         jsonInterface : messagesABI,
-    //          gas: 100000000,
-    //          gasPrice: '0'
-    //       });    
-  };
+  _onSelectReceiver = (user) => {
+    this.setState({ selectedReceiver: user.value });
+    //alert(user.value );
+  }
 
   handleGetMessage = (event) => {
     var self = this;
@@ -161,58 +159,46 @@ class App extends Component {
 
 
   render() {
+    const options = [
+      { value: '', label: 'Sent to' },
+      { value: '0x99578382D949153736aBc6717c357707aDF9F42d', label: 'Alice - 0x99578382D949153736aBc6717c357707aDF9F42d' },
+      { value: '0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad', label: 'Bob - 0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad' },
+      { value: '0x6B3DdD067Cbdd33FAD8cF9992D57EB412D53759C', label: 'Frank - 0x6B3DdD067Cbdd33FAD8cF9992D57EB412D53759C' },
+      { value: '0x7950dC9C0357Dc283bca403aB4AE381c91E48A25', label: 'Anonymous- 0x7950dC9C0357Dc283bca403aB4AE381c91E48A25' }]
     return (
       <div>
-        <h2>Is connected?:</h2><br />
-        {this.state.isConnected ? 'Connected to local node' : 'Not Connected'}
         <h2>Your account: {this.state.account}</h2>
         <br />
-        From:
-        <ListGroup>
-          <ListGroupItem>Alice</ListGroupItem>
-          <ListGroupItem>Bob</ListGroupItem>
-          <ListGroupItem>Frank</ListGroupItem>
-        </ListGroup>;
         <label>
-          Message:
+          Message:{' '}
           <input type="text" value={this.state.sms} onChange={this.handleChange} />
         </label>
-        <button onClick={this.handleNewMessage}> Sent Sms</button>
-        <br />
-        <label>
-          Message:
-          <input type="text" value={this.state.smsGet} onChange={this.handleGetChange} />
-        </label>
-        <button onClick={this.handleGetMessage}> Get Sms</button>
-        <br />
-        <Button variant="primary">Primary</Button>
         <br/>
-        <DropdownButton
-          bsStyle="primary"
-          title="From"
-          id="dropdown-size-large"
-       
-        >
-          <MenuItem eventKey="1">Alice</MenuItem>
-          <MenuItem eventKey="2">Bob</MenuItem>
-          <MenuItem eventKey="3" active>Active Item</MenuItem>
-        </DropdownButton>
-        <Table responsive>
-          <thead>
-            <tr>
-              <th>From</th>
-              <th>To</th>
-              <th>Message</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Alice</td>
-              <td>Bob </td>
-              <td>Thanks you for your tech talk</td>
-            </tr>
-          </tbody>
-        </Table>
+        <Dropdown options={options} onChange={this._onSelectReceiver} value={options[0]} placeholder="Select an option" />
+        <br />
+        <button onClick={this.handleNewMessage}> Sent Sms</button>
+        <button onClick={this.handleRefreshInbox}> Refresh Inbox</button>
+        <br />
+        <div className="App">
+          <p className="Table-header">Private Messages</p>
+          <div>
+            <BootstrapTable data={this.state.dataSmsIn}>
+              <TableHeaderColumn isKey dataField='id'>
+                ID
+          </TableHeaderColumn>
+              <TableHeaderColumn dataField='from'>
+                From
+          </TableHeaderColumn>
+              <TableHeaderColumn dataField='to'>
+                To
+          </TableHeaderColumn>
+              <TableHeaderColumn dataField='text'>
+                Text
+          </TableHeaderColumn>
+            </BootstrapTable>
+          </div>
+        </div>
+
       </div>
     );
   }
