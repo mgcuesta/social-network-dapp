@@ -1,28 +1,37 @@
 import React, { Component } from 'react';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
-import 'react-bootstrap-table/css/react-bootstrap-table.css'
-import Dropdown from 'react-dropdown'
+import 'react-bootstrap-table/css/react-bootstrap-table.css';
+import Dropdown from 'react-dropdown';
 import './App.css';
 import Web3 from 'web3';
 import keythereum from 'keythereum';
 import ethTx from 'ethereumjs-tx';
 import { messagesABI } from './Messages.js';
-
+import IpfsAPI from 'ipfs-api';
+import logo from './images/iobuilders.png'
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
       isConnected: false,
       sms: 'Mensaje por defecto',
-      smsGet: '',
       account: '',
-      selectedReceiver: '',
       contractAddress: '0x3fDda2392D89765946F89Af93F21be3E5C487EF1',
-      to: '0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad'
+      to: ''
     };
     //this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
     this.web3 = new Web3(Web3.givenProvider);
+    var self = this;
+    this.web3.currentProvider.publicConfigStore.on('update', function (changed) {
+      //alert(self.state.account);
+      //alert(changed.selectedAddress); 
+      if (self.state.account !== changed.selectedAddress) {
+        //alert('Account change to: ', changed.selectedAddress )
+        self.setState({ account: changed.selectedAddress })
+      }
+    });
     this.handleRefreshInbox = this.handleRefreshInbox.bind(this)
+    this.handleNewMessage = this.handleNewMessage.bind(this)
   }
 
   async componentWillMount() {
@@ -34,16 +43,26 @@ class App extends Component {
 
         this.setState({
           isConnected: true,
-          messageContract: new this.web3.eth.Contract(messagesABI, this.state.contractAddress)
+          messageContract: new this.web3.eth.Contract(messagesABI, this.state.contractAddress),
+          ipfs: IpfsAPI(
+            {
+              host: 'localhost',
+              port: 5002,
+              protocol: 'http',
+              headers: {
+                'Access-Control-Allow-Origin': '*'
+              }
+            }
+          )
         });
         const accounts = await this.web3.eth.getAccounts();
 
         if (!accounts.length) {
-          console.log("haz login capullo");
+          alert('Please, you need loggin in Metamask')
           return;
         }
 
-        this.setState({ account: accounts[0] })
+        this.setState({ account: accounts[0].toLowerCase() })
 
       } catch (e) {
         console.log("error", e);
@@ -59,39 +78,55 @@ class App extends Component {
   }
 
   async handleRefreshInbox() {
+    this.checkMetamak();
     var updateSms = []
     // alert(addresses[user.value]);
-    const totalMessages = await this.state.messageContract.methods.lastIndex(this.state.account).call()
-    var pos;
-    for (pos = 1; pos <= totalMessages; pos++) {
-      // alert('post: ' + pos);
-      const message = await this.state.messageContract.methods.getMessageByIndex(this.state.account, pos).call()
-      //alert('message: '+message[1])
-      this.setState({ smsGet: message[1] });
-      updateSms.push({ id: message[2], from: message[0], to: this.state.account, text: message[1] })
-      this.setState({ dataSmsIn: updateSms })
+    try {
+      const totalMessages = await this.state.messageContract.methods.lastIndex(this.state.account).call()
+      var pos;
+      for (pos = 1; pos <= totalMessages; pos++) {
+        // alert('post: ' + pos);
+        const message = await this.state.messageContract.methods.getMessageByIndex(this.state.account, pos).call()
+        //alert('message: '+message[1])
+        let messageText = message[1]
+        try {
+          messageText = await this.state.ipfs.files.cat(message[1])
+        }
+        catch (e) {
+          console.log('El mensaje no esta cifrado: ' + messageText)
+        }
+        updateSms.push({ id: message[2], from: message[0].toLowerCase(), to: this.state.account, text: messageText })
+        this.setState({ dataSmsIn: updateSms })
+      }
+    }
+    catch (e) {
+      alert('Unexpected error: ' + e)
     }
 
   }
 
-  handleNewMessage = (event) => {
+  async writeIpfs() {
+    try {
+      let content = this.state.ipfs.types.Buffer.from(this.state.sms);
+      let results = await this.state.ipfs.files.add(content);
+      let hash = results[0].hash;
+      alert('hashh: ' + hash)
+      return hash;
+    }
+    catch (e) {
+      alert('Unexpected error: ' + e)
+    }
+  }
 
-    // const alice = {address: '0x59ebd6d3e83d6933e140913a34f296254490022c', privateKey: '7de472733d1c3e247c48a3150f634df12eff1e4e09cc431d91aad4681f6c6016'};
+  async handleNewMessage(event) {
 
-
-    //var keyObject = this.createAccount();
-    //const rawTx = this.createTx(keyObject.address, keyObject.crypto.ciphertext);
-    //const rawTx = this.createTx(accounts[0].address, accounts[0].privateKey);
-
-    // this.web3.eth.sendSignedTransaction(rawTx, (_erro, _repo) => {
-    //   console.log(_erro, _repo);
-    // });
-    //alert('acc: ',this.web3.eth.accounts[0])
-    if (this.state.selectedReceiver === '') {
+    this.checkMetamak();
+    if (this.state.to === '') {
       alert('Please, select new receiver')
     }
     else {
-      this.state.messageContract.methods.sendMessage(this.state.to, this.state.sms).send({ from: this.state.account });
+      const hash = await this.writeIpfs();
+      this.state.messageContract.methods.sendMessage(this.state.to, hash).send({ from: this.state.account });
     }
     event.preventDefault();
   }
@@ -141,22 +176,16 @@ class App extends Component {
   }
 
   _onSelectReceiver = (user) => {
-    this.setState({ selectedReceiver: user.value });
+    this.setState({ to: user.value });
     //alert(user.value );
   }
 
-  handleGetMessage = (event) => {
-    var self = this;
-    this.state.messageContract.methods.getLastMessage(this.state.account).call()
-      .then(
-        function (response) {
-          self.setState({ smsGet: response[1] });
-          return response[1];
-        }
-      );
-    event.preventDefault();
+  checkMetamak() {
+    if (this.state.account === '') {
+      alert('Please, you need loggin in Metamask');
+      return;
+    }
   }
-
 
   render() {
     const options = [
@@ -167,13 +196,19 @@ class App extends Component {
       { value: '0x7950dC9C0357Dc283bca403aB4AE381c91E48A25', label: 'Anonymous- 0x7950dC9C0357Dc283bca403aB4AE381c91E48A25' }]
     return (
       <div>
+        <div className="row">
+          <div>
+            <img src={logo} width="200" height="100" />
+          </div>
+        </div>
+        <br/>
         <h2>Your account: {this.state.account}</h2>
         <br />
         <label>
           Message:{' '}
           <input type="text" value={this.state.sms} onChange={this.handleChange} />
         </label>
-        <br/>
+        <br />
         <Dropdown options={options} onChange={this._onSelectReceiver} value={options[0]} placeholder="Select an option" />
         <br />
         <button onClick={this.handleNewMessage}> Sent Sms</button>
