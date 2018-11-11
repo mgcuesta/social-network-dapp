@@ -16,7 +16,8 @@ class App extends Component {
       isConnected: false,
       sms: 'Mensaje por defecto',
       account: '',
-      contractAddress: '0x3fDda2392D89765946F89Af93F21be3E5C487EF1',
+      //contractAddress: '0x3fDda2392D89765946F89Af93F21be3E5C487EF1', //ropsten with ipfs
+      contractAddress: '0x399e089292ba6bf867f806ef4c7defe57a93024d', //ropsten with group messages
       to: ''
     };
     //this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
@@ -29,10 +30,13 @@ class App extends Component {
         //alert('Account change to: ', changed.selectedAddress )
         self.setState({ account: changed.selectedAddress })
         self.handleRefreshInbox();
+        self.handleRefreshPublicInbox();
       }
     });
     this.handleRefreshInbox = this.handleRefreshInbox.bind(this)
     this.handleNewMessage = this.handleNewMessage.bind(this)
+    this.handleRefreshPublicInbox = this.handleRefreshPublicInbox.bind(this);
+    this.handleNewPublicMessage = this.handleNewPublicMessage.bind(this);
   }
 
   async componentWillMount() {
@@ -111,12 +115,44 @@ class App extends Component {
 
   }
 
+  async handleRefreshPublicInbox() {
+    this.checkMetamak();
+
+    // alert(addresses[user.value]);
+    try {
+      var updatePublicSms = []
+      if (this.state.messageContract === undefined) {
+        return;
+      }
+      const totalMessages = await this.state.messageContract.methods.lastCircleIndex().call()
+      var pos;
+      for (pos = 1; pos <= totalMessages; pos++) {
+        // alert('post: ' + pos);
+        const message = await this.state.messageContract.methods.getCircleMessageByIndex(pos).call()
+        //alert('message: '+message[1])
+        let messageText = message[1]
+        try {
+          messageText = await this.state.ipfs.files.cat(message[1])
+        }
+        catch (e) {
+          console.log('El mensaje no esta cifrado: ' + messageText)
+        }
+        updatePublicSms.push({ id: message[2], from: message[0].toLowerCase(), text: messageText })
+      }
+      this.setState({ dataCircleSmsIn: updatePublicSms })
+    }
+    catch (e) {
+      alert('Unexpected error: ' + e)
+    }
+
+  }
+
   async writeIpfs() {
     try {
       let content = this.state.ipfs.types.Buffer.from(this.state.sms);
       let results = await this.state.ipfs.files.add(content);
       let hash = results[0].hash;
-      alert('hashh: ' + hash)
+      //alert('hashh: ' + hash)
       return hash;
     }
     catch (e) {
@@ -134,6 +170,14 @@ class App extends Component {
       const hash = await this.writeIpfs();
       this.state.messageContract.methods.sendMessage(this.state.to, hash).send({ from: this.state.account });
     }
+    event.preventDefault();
+  }
+
+  async handleNewPublicMessage(event) {
+
+    this.checkMetamak();
+    const hash = await this.writeIpfs();
+    this.state.messageContract.methods.sendCircleMessage(this.state.to, hash).send({ from: this.state.account });
     event.preventDefault();
   }
 
@@ -232,6 +276,26 @@ class App extends Component {
           </TableHeaderColumn>
               <TableHeaderColumn dataField='to'>
                 To
+          </TableHeaderColumn>
+              <TableHeaderColumn dataField='text'>
+                Text
+          </TableHeaderColumn>
+            </BootstrapTable>
+          </div>
+        </div>
+        <br/>
+        <button onClick={this.handleNewPublicMessage}> Sent Public Sms</button>
+        <button onClick={this.handleRefreshPublicInbox}> Refresh Public Inbox</button>        
+        <br />
+        <div className="App">
+          <p className="Table-header">Public Messages</p>
+          <div>
+            <BootstrapTable data={this.state.dataCircleSmsIn}>
+              <TableHeaderColumn isKey dataField='id'>
+                ID
+          </TableHeaderColumn>
+              <TableHeaderColumn dataField='from'>
+                From
           </TableHeaderColumn>
               <TableHeaderColumn dataField='text'>
                 Text
