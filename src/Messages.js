@@ -4,21 +4,16 @@ export const messagesABI = [
 		"inputs": [
 			{
 				"indexed": true,
-				"name": "_sender",
+				"name": "previousOwner",
 				"type": "address"
 			},
 			{
-				"indexed": false,
-				"name": "_key",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"name": "_keytype",
-				"type": "string"
+				"indexed": true,
+				"name": "newOwner",
+				"type": "address"
 			}
 		],
-		"name": "PublicKeyUpdated",
+		"name": "OwnershipTransferred",
 		"type": "event"
 	},
 	{
@@ -30,6 +25,15 @@ export const messagesABI = [
 			}
 		],
 		"name": "addCircle",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "renounceOwnership",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -88,10 +92,6 @@ export const messagesABI = [
 		"constant": false,
 		"inputs": [
 			{
-				"name": "_to",
-				"type": "address"
-			},
-			{
 				"name": "_text",
 				"type": "string"
 			}
@@ -101,6 +101,28 @@ export const messagesABI = [
 		"payable": false,
 		"stateMutability": "nonpayable",
 		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "_sender",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "_key",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"name": "_keytype",
+				"type": "string"
+			}
+		],
+		"name": "PublicKeyUpdated",
+		"type": "event"
 	},
 	{
 		"constant": false,
@@ -133,6 +155,20 @@ export const messagesABI = [
 			}
 		],
 		"name": "setPublicKey",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -294,6 +330,20 @@ export const messagesABI = [
 	},
 	{
 		"constant": true,
+		"inputs": [],
+		"name": "isOwner",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [
 			{
 				"name": "",
@@ -443,6 +493,20 @@ export const messagesABI = [
 			{
 				"name": "",
 				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address"
 			}
 		],
 		"payable": false,

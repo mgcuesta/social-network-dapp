@@ -9,6 +9,8 @@ import ethTx from 'ethereumjs-tx';
 import { messagesABI } from './Messages.js';
 import IpfsAPI from 'ipfs-api';
 import logo from './images/iobuilders.png'
+import EthCrypto from 'eth-crypto';
+import {keys} from './accounts.js'
 class App extends Component {
   constructor(props) {
     super(props);
@@ -17,7 +19,8 @@ class App extends Component {
       sms: 'Mensaje por defecto',
       account: '',
       //contractAddress: '0x3fDda2392D89765946F89Af93F21be3E5C487EF1', //ropsten with ipfs
-      contractAddress: '0x399e089292ba6bf867f806ef4c7defe57a93024d', //ropsten with group messages
+      //contractAddress: '0x399e089292ba6bf867f806ef4c7defe57a93024d', //ropsten with group messages
+      contractAddress: '0x79b26b495e46632f4097b7f057306fd8ae47c6f2', //ropsten with add circle onlyeOwner and publicKey
       to: ''
     };
     //this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
@@ -99,11 +102,33 @@ class App extends Component {
         const message = await this.state.messageContract.methods.getMessageByIndex(this.state.account, pos).call()
         //alert('message: '+message[1])
         let messageText = message[1]
+        let encryptedData
+        try{
+          encryptedData = EthCrypto.cipher.parse(messageText);
+          console.log('encryptedData.iv: '+encryptedData.iv)
+          console.log('encryptedData.ephemPublicKey: '+encryptedData.ephemPublicKey)
+          console.log('encryptedData.ciphertext: '+encryptedData.ciphertext)
+          console.log('encryptedData.mac: '+encryptedData.mac)
+        }
+        catch(e){
+          console.log('Error al parsear el messageText')
+        }
+        try{
+          const priv = keys[this.state.account]
+          console.log('priv: '+priv);          
+          messageText = await EthCrypto.decryptWithPrivateKey(priv, encryptedData);
+          console.log('decrypted: '+ messageText);
+
+        }
+        catch(e){
+          console.log(e);
+          console.log('El mensaje no esta encriptado: ' + messageText)
+        }
         try {
-          messageText = await this.state.ipfs.files.cat(message[1])
+          messageText = await this.state.ipfs.files.cat(messageText)
         }
         catch (e) {
-          console.log('El mensaje no esta cifrado: ' + messageText)
+          console.log('El mensaje no esta haseado: ' + messageText)
         }
         updateSms.push({ id: message[2], from: message[0].toLowerCase(), to: this.state.account, text: messageText })
       }
@@ -147,9 +172,9 @@ class App extends Component {
 
   }
 
-  async writeIpfs() {
+  async writeIpfs(text) {
     try {
-      let content = this.state.ipfs.types.Buffer.from(this.state.sms);
+      let content = this.state.ipfs.types.Buffer.from(text);
       let results = await this.state.ipfs.files.add(content);
       let hash = results[0].hash;
       //alert('hashh: ' + hash)
@@ -167,8 +192,22 @@ class App extends Component {
       alert('Please, select new receiver')
     }
     else {
-      const hash = await this.writeIpfs();
-      this.state.messageContract.methods.sendMessage(this.state.to, hash).send({ from: this.state.account });
+      //const alice = EthCrypto.createIdentity();        
+      //const decrypted = await EthCrypto.decryptWithPrivateKey(priv, encrypted);
+      //console.log ('decrypted: '+ decrypted);
+      const hash = await this.writeIpfs(this.state.sms);
+      console.log('hash: '+hash)
+      const pub = await this.state.messageContract.methods.getPublicKey(this.state.account).call()
+      console.log('pub: '+pub);
+      const encryptedHash = await EthCrypto.encryptWithPublicKey(pub._key, hash);
+      console.log ('encryptedHash: '+ encryptedHash);      
+      console.log('encryptedHash.iv: '+encryptedHash.iv)
+      console.log('encryptedHash.ephemPublicKey: '+encryptedHash.ephemPublicKey)
+      console.log('encryptedHash.ciphertext: '+encryptedHash.ciphertext)
+      console.log('encryptedHash.mac: '+encryptedHash.mac)      
+      const encryptedCompress = EthCrypto.cipher.stringify(encryptedHash)
+      console.log('encryptedCompress: '+encryptedCompress);
+      this.state.messageContract.methods.sendMessage(this.state.to, encryptedCompress).send({ from: this.state.account });
     }
     event.preventDefault();
   }
@@ -176,8 +215,8 @@ class App extends Component {
   async handleNewPublicMessage(event) {
 
     this.checkMetamak();
-    const hash = await this.writeIpfs();
-    this.state.messageContract.methods.sendCircleMessage(this.state.to, hash).send({ from: this.state.account });
+    const hash = await this.writeIpfs(this.state.sms);
+    this.state.messageContract.methods.sendCircleMessage(hash).send({ from: this.state.account });
     event.preventDefault();
   }
 
