@@ -10,10 +10,12 @@
     "prop-types": "^15.6.2",
     "react": "^16.6.0",
     "react-admin": "^2.4.1",
+    "react-alert": "^4.0.4",
     "react-bootstrap": "^0.32.4",
     "react-bootstrap-table": "^4.3.1",
     "react-dom": "^16.6.0",
     "react-dropdown": "^1.6.2",
+    "react-popup": "^0.9.3",
     "react-scripts": "2.0.5",
     "web3": "^1.0.0-beta.36"
   },

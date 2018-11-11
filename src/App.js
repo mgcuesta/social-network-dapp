@@ -28,6 +28,7 @@ class App extends Component {
       if (self.state.account !== changed.selectedAddress) {
         //alert('Account change to: ', changed.selectedAddress )
         self.setState({ account: changed.selectedAddress })
+        self.handleRefreshInbox();
       }
     });
     this.handleRefreshInbox = this.handleRefreshInbox.bind(this)
@@ -55,6 +56,7 @@ class App extends Component {
             }
           )
         });
+        //this.state.contractAddress.events.NewMessage(function(error, event){ console.log(event); alert(event)})
         const accounts = await this.web3.eth.getAccounts();
 
         if (!accounts.length) {
@@ -79,9 +81,13 @@ class App extends Component {
 
   async handleRefreshInbox() {
     this.checkMetamak();
-    var updateSms = []
+
     // alert(addresses[user.value]);
     try {
+      var updateSms = []
+      if (this.state.messageContract === undefined) {
+        return;
+      }
       const totalMessages = await this.state.messageContract.methods.lastIndex(this.state.account).call()
       var pos;
       for (pos = 1; pos <= totalMessages; pos++) {
@@ -96,8 +102,8 @@ class App extends Component {
           console.log('El mensaje no esta cifrado: ' + messageText)
         }
         updateSms.push({ id: message[2], from: message[0].toLowerCase(), to: this.state.account, text: messageText })
-        this.setState({ dataSmsIn: updateSms })
       }
+      this.setState({ dataSmsIn: updateSms })
     }
     catch (e) {
       alert('Unexpected error: ' + e)
@@ -198,10 +204,10 @@ class App extends Component {
       <div>
         <div className="row">
           <div>
-            <img src={logo} width="200" height="100" />
+            <img src={logo} width="200" height="100" alt="Build the future" />
           </div>
         </div>
-        <br/>
+        <br />
         <h2>Your account: {this.state.account}</h2>
         <br />
         <label>
