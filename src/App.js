@@ -37,7 +37,6 @@ class App extends Component {
       }
     });
     this.handleRefreshInbox = this.handleRefreshInbox.bind(this)
-    this.handleNewMessage = this.handleNewMessage.bind(this)
     this.handleRefreshPublicInbox = this.handleRefreshPublicInbox.bind(this);
     this.handleNewPublicMessage = this.handleNewPublicMessage.bind(this);
   }
@@ -185,7 +184,7 @@ class App extends Component {
     }
   }
 
-  async handleNewMessage(event) {
+  handleNewMessage = async (event) => {
 
     this.checkMetamak();
     if (this.state.to === '') {
@@ -197,8 +196,8 @@ class App extends Component {
       //console.log ('decrypted: '+ decrypted);
       const hash = await this.writeIpfs(this.state.sms);
       console.log('hash: '+hash)
-      const pub = await this.state.messageContract.methods.getPublicKey(this.state.account).call()
-      console.log('pub: '+pub);
+      const pub = await this.state.messageContract.methods.getPublicKey(this.state.to).call()
+      console.log('pub: '+pub._key);
       const encryptedHash = await EthCrypto.encryptWithPublicKey(pub._key, hash);
       console.log ('encryptedHash: '+ encryptedHash);      
       console.log('encryptedHash.iv: '+encryptedHash.iv)
@@ -279,10 +278,10 @@ class App extends Component {
   render() {
     const options = [
       { value: '', label: 'Sent to' },
-      { value: '0x99578382D949153736aBc6717c357707aDF9F42d', label: 'Alice - 0x99578382D949153736aBc6717c357707aDF9F42d' },
-      { value: '0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad', label: 'Bob - 0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad' },
-      { value: '0x6B3DdD067Cbdd33FAD8cF9992D57EB412D53759C', label: 'Frank - 0x6B3DdD067Cbdd33FAD8cF9992D57EB412D53759C' },
-      { value: '0x7950dC9C0357Dc283bca403aB4AE381c91E48A25', label: 'Anonymous- 0x7950dC9C0357Dc283bca403aB4AE381c91E48A25' }]
+      { value: '0x99578382d949153736abc6717c357707adf9f42d', label: 'Alice - 0x99578382D949153736aBc6717c357707aDF9F42d' },
+      { value: '0x9aed0a1447345c15254e95cb92a0fb514f9896ad', label: 'Bob - 0x9AeD0a1447345c15254e95CB92a0Fb514f9896ad' },
+      { value: '0x6b3ddd067cbdd33fad8cf9992d57eb412d53759c', label: 'Frank - 0x6B3DdD067Cbdd33FAD8cF9992D57EB412D53759C' },
+      { value: '0x7950dc9c0357dc283bca403ab4ae381c91e48a25', label: 'Anonymous- 0x7950dC9C0357Dc283bca403aB4AE381c91E48A25' }]
     return (
       <div>
         <div className="row">
