@@ -23,7 +23,12 @@ This is a simple descentralized application that allow send messages inside a so
 - It is encrypted with `ethereum key pair`
 - It is using a common [eth-crypto](https://github.com/pubkey/eth-crypto#encryptwithpublickey) library
 
-![image](src/images/social-network-dapp-png)
+![image](src/images/social-network-dapp.png)
+![image](src/images/alice-account.png)
+![image](src/images/bob-account.png)
+![image](src/images/private-messages.png)
+![image](src/images/public-message.png)
+
 ## Smart-Contract
 - This smart contract is deployed [TestNet Ropsten blockchain](https://ropsten.etherscan.io/)
 - Here, you can [check all transactions](https://ropsten.etherscan.io/address/0x79b26b495e46632f4097b7f057306fd8ae47c6f2) related with it
