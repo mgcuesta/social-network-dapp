@@ -8,7 +8,7 @@ import keythereum from 'keythereum';
 import ethTx from 'ethereumjs-tx';
 import { messagesABI } from './Messages.js';
 import IpfsAPI from 'ipfs-api';
-import logo from './images/iobuilders.png'
+import logo from './images/social-network.png'
 import EthCrypto from 'eth-crypto';
 import {keys} from './accounts.js'
 class App extends Component {
@@ -18,19 +18,13 @@ class App extends Component {
       isConnected: false,
       sms: 'Mensaje por defecto',
       account: '',
-      //contractAddress: '0x3fDda2392D89765946F89Af93F21be3E5C487EF1', //ropsten with ipfs
-      //contractAddress: '0x399e089292ba6bf867f806ef4c7defe57a93024d', //ropsten with group messages
       contractAddress: '0x79b26b495e46632f4097b7f057306fd8ae47c6f2', //ropsten with add circle onlyeOwner and publicKey
       to: ''
     };
-    //this.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
     this.web3 = new Web3(Web3.givenProvider);
     var self = this;
     this.web3.currentProvider.publicConfigStore.on('update', function (changed) {
-      //alert(self.state.account);
-      //alert(changed.selectedAddress); 
       if (self.state.account !== changed.selectedAddress) {
-        //alert('Account change to: ', changed.selectedAddress )
         self.setState({ account: changed.selectedAddress })
         self.handleRefreshInbox();
         self.handleRefreshPublicInbox();
@@ -62,7 +56,6 @@ class App extends Component {
             }
           )
         });
-        //this.state.contractAddress.events.NewMessage(function(error, event){ console.log(event); alert(event)})
         const accounts = await this.web3.eth.getAccounts();
 
         if (!accounts.length) {
@@ -88,7 +81,6 @@ class App extends Component {
   async handleRefreshInbox() {
     this.checkMetamak();
 
-    // alert(addresses[user.value]);
     try {
       var updateSms = []
       if (this.state.messageContract === undefined) {
@@ -97,31 +89,21 @@ class App extends Component {
       const totalMessages = await this.state.messageContract.methods.lastIndex(this.state.account).call()
       var pos;
       for (pos = 1; pos <= totalMessages; pos++) {
-        // alert('post: ' + pos);
         const message = await this.state.messageContract.methods.getMessageByIndex(this.state.account, pos).call()
-        //alert('message: '+message[1])
         let messageText = message[1]
         let encryptedData
         try{
           encryptedData = EthCrypto.cipher.parse(messageText);
-          console.log('encryptedData.iv: '+encryptedData.iv)
-          console.log('encryptedData.ephemPublicKey: '+encryptedData.ephemPublicKey)
-          console.log('encryptedData.ciphertext: '+encryptedData.ciphertext)
-          console.log('encryptedData.mac: '+encryptedData.mac)
         }
         catch(e){
           console.log('Error al parsear el messageText')
         }
         try{
           const priv = keys[this.state.account]
-          console.log('priv: '+priv);          
           messageText = await EthCrypto.decryptWithPrivateKey(priv, encryptedData);
-          console.log('decrypted: '+ messageText);
-
         }
         catch(e){
           console.log(e);
-          console.log('El mensaje no esta encriptado: ' + messageText)
         }
         try {
           messageText = await this.state.ipfs.files.cat(messageText)
@@ -142,7 +124,6 @@ class App extends Component {
   async handleRefreshPublicInbox() {
     this.checkMetamak();
 
-    // alert(addresses[user.value]);
     try {
       var updatePublicSms = []
       if (this.state.messageContract === undefined) {
@@ -151,9 +132,7 @@ class App extends Component {
       const totalMessages = await this.state.messageContract.methods.lastCircleIndex().call()
       var pos;
       for (pos = 1; pos <= totalMessages; pos++) {
-        // alert('post: ' + pos);
         const message = await this.state.messageContract.methods.getCircleMessageByIndex(pos).call()
-        //alert('message: '+message[1])
         let messageText = message[1]
         try {
           messageText = await this.state.ipfs.files.cat(message[1])
@@ -176,7 +155,6 @@ class App extends Component {
       let content = this.state.ipfs.types.Buffer.from(text);
       let results = await this.state.ipfs.files.add(content);
       let hash = results[0].hash;
-      //alert('hashh: ' + hash)
       return hash;
     }
     catch (e) {
@@ -191,21 +169,10 @@ class App extends Component {
       alert('Please, select new receiver')
     }
     else {
-      //const alice = EthCrypto.createIdentity();        
-      //const decrypted = await EthCrypto.decryptWithPrivateKey(priv, encrypted);
-      //console.log ('decrypted: '+ decrypted);
       const hash = await this.writeIpfs(this.state.sms);
-      console.log('hash: '+hash)
       const pub = await this.state.messageContract.methods.getPublicKey(this.state.to).call()
-      console.log('pub: '+pub._key);
       const encryptedHash = await EthCrypto.encryptWithPublicKey(pub._key, hash);
-      console.log ('encryptedHash: '+ encryptedHash);      
-      console.log('encryptedHash.iv: '+encryptedHash.iv)
-      console.log('encryptedHash.ephemPublicKey: '+encryptedHash.ephemPublicKey)
-      console.log('encryptedHash.ciphertext: '+encryptedHash.ciphertext)
-      console.log('encryptedHash.mac: '+encryptedHash.mac)      
       const encryptedCompress = EthCrypto.cipher.stringify(encryptedHash)
-      console.log('encryptedCompress: '+encryptedCompress);
       this.state.messageContract.methods.sendMessage(this.state.to, encryptedCompress).send({ from: this.state.account });
     }
     event.preventDefault();
@@ -256,16 +223,11 @@ class App extends Component {
     };
 
     var keyObject = keythereum.dump('', dk.privateKey, dk.salt, dk.iv, options);
-    console.log('private key: ', keyObject.privateKey);
-    console.log('address: ', '0x' + keyObject.address);
-    console.log(Buffer.from(keyObject.crypto.ciphertext, 'hex'));
-    console.log(keyObject.crypto.ciphertext);
     return keyObject;
   }
 
   _onSelectReceiver = (user) => {
     this.setState({ to: user.value });
-    //alert(user.value );
   }
 
   checkMetamak() {
@@ -286,11 +248,13 @@ class App extends Component {
       <div>
         <div className="row">
           <div>
-            <img src={logo} width="200" height="100" alt="Build the future" />
+            <img src={logo} width="500" height="270" alt="Build the future" />
           </div>
         </div>
+        <br/>
+        <h1>Social Network DAPP</h1>
         <br />
-        <h2>Your account: {this.state.account}</h2>
+        <label>Your account: <b>{this.state.account}</b></label>
         <br />
         <label>
           Message:{' '}
