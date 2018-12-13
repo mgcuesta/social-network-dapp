@@ -10,7 +10,28 @@ import { messagesABI } from './Messages.js';
 import IpfsAPI from 'ipfs-api';
 import logo from './images/social-network.png'
 import EthCrypto from 'eth-crypto';
-import {keys} from './accounts.js'
+import {keys} from './accounts.js';
+import { withStyles } from '@material-ui/core/styles';
+import TextField from '@material-ui/core/TextField';
+
+const styles = theme => ({
+  container: {
+    display: 'flex',
+    flexWrap: 'wrap',
+  },
+  textField: {
+    marginLeft: theme.spacing.unit,
+    marginRight: theme.spacing.unit,
+    width: 200,
+  },
+  dense: {
+    marginTop: 19,
+  },
+  menu: {
+    width: 200,
+  },
+});
+
 class App extends Component {
   constructor(props) {
     super(props);
@@ -256,10 +277,13 @@ class App extends Component {
         <br />
         <label>Your account: <b>{this.state.account}</b></label>
         <br />
-        <label>
-          Message:{' '}
-          <input type="text" value={this.state.sms} onChange={this.handleChange} />
-        </label>
+        <TextField
+         id="standard-name"
+         label="Message"
+         value={this.state.sms}
+         onChange={this.handleChange}
+         margin="normal"
+       />         
         <br />
         <Dropdown options={options} onChange={this._onSelectReceiver} value={options[0]} placeholder="Select an option" />
         <br />
@@ -311,4 +335,4 @@ class App extends Component {
   }
 }
 
-export default App;
+export default withStyles(styles)(App);
